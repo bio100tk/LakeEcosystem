@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lake Food Web Simulator</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef6f7;
+      margin: 0;
+      padding: 20px;
+      color: #222;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    }
+
+    .controls {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .level-control {
+      margin-bottom: 18px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #f7f7f7;
+    }
+
+    .level-control label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .value {
+      font-weight: bold;
+      float: right;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #2d7080;
+      color: white;
+      font-size: 15px;
+    }
+
+    button:hover {
+      background: #235966;
+    }
+
+    .reset {
+      background: #8a3a3a;
+    }
+
+    .reset:hover {
+      background: #6e2d2d;
+    }
+
+    .time-display {
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .pyramid {
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 6px;
+      margin-top: 20px;
+    }
+
+.pyramid-level {
+  color: black;
+  text-align: center;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: width 0.35s ease, opacity 0.35s ease;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+    .algae {
+      background: #2e9f5d;
+    }
+
+    .zooplankton {
+      background: #67a84f;
+    }
+
+    .kokanee {
+      background: #d98b32;
+    }
+
+    .trout {
+      background: #a9403a;
+    }
+
+    canvas {
+      width: 100%;
+      height: 340px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .legend span {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 6px;
+      vertical-align: middle;
+      border-radius: 3px;
+    }
+
+    @media (max-width: 850px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Lake Ecosystem Simulator</h1>
+
+  <div class="container">
+    <div class="panel">
+      <div class="time-display">
+        Time Step: <span id="timeStep">0</span>
+      </div>
+
+      <div class="controls">
+        <button onclick="toggleSimulation()" id="runButton">Start</button>
+        <button onclick="stepSimulation()">Step Once</button>
+        <button onclick="resetSimulation()" class="reset">Reset</button>
+      </div>
+
+      <div class="level-control">
+        <label>
+          Algae
+          <span class="value" id="algaeValue">10000</span>
+        </label>
+        <input type="range" id="algaeSlider" min="0" max="20000" value="10000" step="100">
+      </div>
+
+      <div class="level-control">
+        <label>
+          Zooplankton
+          <span class="value" id="zooplanktonValue">1000</span>
+        </label>
+        <input type="range" id="zooplanktonSlider" min="0" max="5000" value="1000" step="25">
+      </div>
+
+      <div class="level-control">
+        <label>
+          Kokanee Salmon
+          <span class="value" id="kokaneeValue">100</span>
+        </label>
+        <input type="range" id="kokaneeSlider" min="0" max="1000" value="100" step="5">
+      </div>
+
+      <div class="level-control">
+        <label>
+          Brown Trout
+          <span class="value" id="troutValue">10</span>
+        </label>
+        <input type="range" id="troutSlider" min="0" max="100" value="10" step="1">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Energy Pyramid</h2>
+
+      <div class="pyramid">
+        <div class="pyramid-level algae" id="algaeBar">Algae: 10000</div>
+        <div class="pyramid-level zooplankton" id="zooplanktonBar">Zooplankton: 1000</div>
+        <div class="pyramid-level kokanee" id="kokaneeBar">Kokanee Salmon: 100</div>
+        <div class="pyramid-level trout" id="troutBar">Brown Trout: 10</div>
+      </div>
+
+      <h2>Population Over Time</h2>
+      <canvas id="graph" width="600" height="340"></canvas>
+
+      <div class="legend">
+        <div><span style="background:#2e9f5d;"></span>Algae</div>
+        <div><span style="background:#67a84f;"></span>Zooplankton</div>
+        <div><span style="background:#d98b32;"></span>Kokanee Salmon</div>
+        <div><span style="background:#a9403a;"></span>Brown Trout</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const maxValues = {
+      algae: 20000,
+      zooplankton: 5000,
+      kokanee: 1000,
+      trout: 100
+    };
+
+    const startingValues = {
+      algae: 10000,
+      zooplankton: 1000,
+      kokanee: 100,
+      trout: 10
+    };
+
+    let algae = startingValues.algae;
+    let zooplankton = startingValues.zooplankton;
+    let kokanee = startingValues.kokanee;
+    let trout = startingValues.trout;
+
+    let timeStep = 0;
+    let running = false;
+    let intervalId = null;
+    let history = [];
+
+    const algaeSlider = document.getElementById("algaeSlider");
+    const zooplanktonSlider = document.getElementById("zooplanktonSlider");
+    const kokaneeSlider = document.getElementById("kokaneeSlider");
+    const troutSlider = document.getElementById("troutSlider");
+
+    algaeSlider.addEventListener("input", () => {
+      algae = Number(algaeSlider.value);
+      updateDisplay();
+    });
+
+    zooplanktonSlider.addEventListener("input", () => {
+      zooplankton = Number(zooplanktonSlider.value);
+      updateDisplay();
+    });
+
+    kokaneeSlider.addEventListener("input", () => {
+      kokanee = Number(kokaneeSlider.value);
+      updateDisplay();
+    });
+
+    troutSlider.addEventListener("input", () => {
+      trout = Number(troutSlider.value);
+      updateDisplay();
+    });
+
+    function toggleSimulation() {
+      running = !running;
+
+      if (running) {
+        document.getElementById("runButton").textContent = "Pause";
+        intervalId = setInterval(stepSimulation, 650);
+      } else {
+        document.getElementById("runButton").textContent = "Start";
+        clearInterval(intervalId);
+      }
+    }
+
+    function stepSimulation() {
+      timeStep++;
+
+      const next = calculateNextPopulations();
+
+      algae = roundAndClamp(next.algae, 0, maxValues.algae);
+      zooplankton = roundAndClamp(next.zooplankton, 0, maxValues.zooplankton);
+      kokanee = roundAndClamp(next.kokanee, 0, maxValues.kokanee);
+      trout = roundAndClamp(next.trout, 0, maxValues.trout);
+
+      recordHistory();
+      syncSliders();
+      updateDisplay();
+    }
+
+function calculateNextPopulations() {
+  const algaeDeviation = getDeviation(algae, startingValues.algae);
+  const zooplanktonDeviation = getDeviation(zooplankton, startingValues.zooplankton);
+  const kokaneeDeviation = getDeviation(kokanee, startingValues.kokanee);
+  const troutDeviation = getDeviation(trout, startingValues.trout);
+
+  const targetZooplankton = algae * 0.10;
+  const targetKokanee = zooplankton * 0.10;
+  const targetTrout = kokanee * 0.10;
+
+  const targetAlgaeFromZooplankton = zooplankton * 10;
+
+  const algaePredatorPreyChange =
+    algae * 0.04 * (-algaeDeviation)
+    - algae * 0.06 * zooplanktonDeviation;
+
+  const zooplanktonPredatorPreyChange =
+    zooplankton * 0.05 * algaeDeviation
+    - zooplankton * 0.06 * kokaneeDeviation
+    - zooplankton * 0.025 * zooplanktonDeviation;
+
+  const kokaneePredatorPreyChange =
+    kokanee * 0.06 * zooplanktonDeviation
+    - kokanee * 0.07 * troutDeviation
+    - kokanee * 0.025 * kokaneeDeviation;
+
+  const troutPredatorPreyChange =
+    trout * 0.07 * kokaneeDeviation
+    - trout * 0.03 * troutDeviation;
+
+  const tenPercentPull = 0.045;
+
+  const algaeTenPercentChange =
+    (targetAlgaeFromZooplankton - algae) * tenPercentPull * 0.25;
+
+  const zooplanktonTenPercentChange =
+    (targetZooplankton - zooplankton) * tenPercentPull;
+
+  const kokaneeTenPercentChange =
+    (targetKokanee - kokanee) * tenPercentPull;
+
+  const troutTenPercentChange =
+    (targetTrout - trout) * tenPercentPull;
+
+  return {
+    algae: algae + algaePredatorPreyChange + algaeTenPercentChange,
+    zooplankton: zooplankton + zooplanktonPredatorPreyChange + zooplanktonTenPercentChange,
+    kokanee: kokanee + kokaneePredatorPreyChange + kokaneeTenPercentChange,
+    trout: trout + troutPredatorPreyChange + troutTenPercentChange
+  };
+}
+
+    function getDeviation(value, startingValue) {
+      if (startingValue === 0) return 0;
+      return (value - startingValue) / startingValue;
+    }
+
+    function roundAndClamp(value, min, max) {
+      return Math.max(min, Math.min(max, Math.round(value)));
+    }
+
+    function recordHistory() {
+      history.push({
+        time: timeStep,
+        algae,
+        zooplankton,
+        kokanee,
+        trout
+      });
+
+      if (history.length > 80) {
+        history.shift();
+      }
+    }
+
+    function syncSliders() {
+      algaeSlider.value = algae;
+      zooplanktonSlider.value = zooplankton;
+      kokaneeSlider.value = kokanee;
+      troutSlider.value = trout;
+    }
+
+    function updateDisplay() {
+      document.getElementById("timeStep").textContent = timeStep;
+
+      document.getElementById("algaeValue").textContent = algae;
+      document.getElementById("zooplanktonValue").textContent = zooplankton;
+      document.getElementById("kokaneeValue").textContent = kokanee;
+      document.getElementById("troutValue").textContent = trout;
+
+      updatePyramid();
+      drawGraph();
+    }
+
+function updatePyramid() {
+  updateBar("algaeBar", "Algae", algae);
+  updateBar("zooplanktonBar", "Zooplankton", zooplankton);
+  updateBar("kokaneeBar", "Kokanee Salmon", kokanee);
+  updateBar("troutBar", "Brown Trout", trout);
+}
+
+function updateBar(id, label, value) {
+  const bar = document.getElementById(id);
+
+  const pyramidMax = maxValues.algae;
+
+  const scaledValue = Math.sqrt(Math.max(value, 0));
+  const scaledMax = Math.sqrt(pyramidMax);
+
+  const widthPercent = value <= 0
+    ? 4
+    : Math.max(4, (scaledValue / scaledMax) * 100);
+
+  bar.style.width = widthPercent + "%";
+  bar.style.opacity = value <= 0 ? 0.3 : 1;
+  bar.textContent = `${label}: ${value}`;
+}
+
+function drawGraph() {
+  const canvas = document.getElementById("graph");
+  const ctx = canvas.getContext("2d");
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const padding = 45;
+  const graphWidth = canvas.width - padding * 2;
+  const graphHeight = canvas.height - padding * 2;
+
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, canvas.height - padding);
+  ctx.lineTo(canvas.width - padding, canvas.height - padding);
+  ctx.stroke();
+
+  ctx.fillStyle = "#333";
+  ctx.font = "12px Arial";
+  ctx.fillText("Relative Population", 8, 20);
+  ctx.fillText("Time", canvas.width - 65, canvas.height - 10);
+
+  if (history.length < 2) return;
+
+  drawLine(ctx, "algae", "#2e9f5d", maxValues.algae, padding, graphWidth, graphHeight);
+  drawLine(ctx, "zooplankton", "#67a84f", maxValues.zooplankton, padding, graphWidth, graphHeight);
+  drawLine(ctx, "kokanee", "#d98b32", maxValues.kokanee, padding, graphWidth, graphHeight);
+  drawLine(ctx, "trout", "#a9403a", maxValues.trout, padding, graphWidth, graphHeight);
+}
+
+function drawLine(ctx, key, color, max, padding, graphWidth, graphHeight) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  history.forEach((point, index) => {
+    const x = padding + (index / (history.length - 1)) * graphWidth;
+    const y = padding + graphHeight - (point[key] / max) * graphHeight;
+
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+
+  ctx.stroke();
+}
+
+    function resetSimulation() {
+      algae = startingValues.algae;
+      zooplankton = startingValues.zooplankton;
+      kokanee = startingValues.kokanee;
+      trout = startingValues.trout;
+
+      timeStep = 0;
+      history = [];
+
+      if (running) {
+        toggleSimulation();
+      }
+
+      recordHistory();
+      syncSliders();
+      updateDisplay();
+    }
+
+    recordHistory();
+    updateDisplay();
+  </script>
+</body>
+</html>
